@@ -1,0 +1,14 @@
+{
+    "name": "audio-survey",
+    "version": "1.0.0",
+    "description": "Psycholinguistics Study",
+    "main": "server.js",
+    "type": "module",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.21.0",
+        "body-parser": "^1.20.3"
+    }
+}
