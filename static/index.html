@@ -66,75 +66,193 @@
     <p>Please listen to the audio for each question and type your answer.</p>
 
     <form id="surveyForm">
-        <!-- Q1 -->
+
+        <!-- Participant name -->
         <div class="question">
-            <label for="q1">1. What is the main emotion expressed in the speaker's voice?</label>
-            <audio controls src="/audio/q1.mp3">
-                Your browser does not support the audio element.
-            </audio>
-            <textarea id="q1" name="q1" required></textarea>
+            <label for="participantName">Your name</label>
+            <input id="participantName" name="participantName" type="text" required
+                style="width:100%;padding:0.4rem;font-size:1rem" />
         </div>
 
-        <!-- Q2 -->
-        <div class="question">
-            <label for="q2">2. Summarize what the speaker is talking about.</label>
-            <audio controls src="/audio/q2.mp3">
-                Your browser does not support the audio element.
-            </audio>
-            <textarea id="q2" name="q2" required></textarea>
-        </div>
 
         <button type="submit" id="submitBtn">Submit</button>
     </form>
 
     <p id="thanks" class="hidden">Thanks for completing the survey!</p>
+</body>
 
-    <script>
-        const form = document.getElementById("surveyForm");
-        const submitBtn = document.getElementById("submitBtn");
-        const thanks = document.getElementById("thanks");
+<script>
+    /* ============================================================
+       1. CONFIG: List of audio file paths
+       Add as many as you want. Every one becomes a question.
+       ============================================================ */
+    const FILES = [
+        "audio/1.wav",
+        "audio/2.wav",
+        "audio/3.wav",
+        "audio/4.wav",
+        "audio/5.wav",
+        "audio/6.wav",
+        "audio/7.wav",
+        "audio/8.wav",
+        "audio/9.wav",
+        "audio/10.wav",
+        "audio/11.wav",
+        "audio/12.wav",
+        "audio/13.wav",
+        "audio/14.wav",
+        "audio/15.wav",
+        "audio/16.wav",
+    ];
 
-        form.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            submitBtn.disabled = true;
+    /* ============================================================
+       2. HELPER: Convert filename → safe textarea ID & name
+          - Takes the last chunk after / or \
+          - Removes extension
+          - Replaces spaces or weird characters with underscores
+       ============================================================ */
+    const toId = (path) => {
+        // Get filename only: splits on both / and \ (Windows & web)
+        const base = path.split(/[\\/]/).pop() || "";
 
-            const payload = {
-                q1: form.q1.value.trim(),
-                q2: form.q2.value.trim()
-            };
+        // Remove file extension (.wav, .mp3, etc.)
+        const noExt = base.replace(/\.[^.]+$/, "");
 
-            try {
-                const res = await fetch("/submit", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(payload)
-                });
+        // Make safe for HTML name/id: remove spaces & symbols
+        return noExt.trim()
+            .replace(/\s+/g, "_")
+            .replace(/[^\w\-]/g, "_");
+    };
 
-                const json = await res.json();
-                if (json.ok) {
-                    form.classList.add("hidden");
-                    thanks.classList.remove("hidden");
-                    // optional: store "done" in localStorage
-                    localStorage.setItem("audioSurveyDone", "1");
-                } else {
-                    alert("There was a problem saving your response.");
-                    submitBtn.disabled = false;
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Network error trying to submit.");
-                submitBtn.disabled = false;
-            }
+    /* ============================================================
+       3. HELPER: Fisher–Yates shuffle function
+          - Fully randomizes order of questions
+       ============================================================ */
+    const shuffle = (arr) => {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    };
+
+    /* ============================================================
+       4. BUILD THE SURVEY DYNAMICALLY
+       - Removes placeholder questions
+       - Randomizes FILES
+       - Generates <div.question> for each audio file
+       ============================================================ */
+
+    // Grab important elements from page
+    const formEl = document.getElementById("surveyForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const thanks = document.getElementById("thanks");
+
+    // Shuffle file order
+    const randomizedFiles = shuffle([...FILES]);
+
+    // Keep the exact randomized order so backend knows which audio was which
+    const questionOrder = randomizedFiles.map(src => src.replace(/\\/g, "/"));
+
+    // Track used IDs to prevent duplicates if filenames repeat
+    const usedIds = new Set();
+
+    // Loop through each file and build a question block
+    randomizedFiles.forEach((src, idx) => {
+        // Make sure paths are browser-friendly (convert "\" → "/")
+        const cleanSrc = src.replace(/\\/g, "/");
+
+        // Generate a base ID from filename
+        const baseId = toId(src);
+        let id = baseId;
+
+        // If multiple files share the same name, append _1, _2, etc.
+        let k = 1;
+        while (usedIds.has(id)) {
+            id = `${baseId}_${k++}`;
+        }
+        usedIds.add(id);
+
+        // Create the wrapper div.question
+        const wrapper = document.createElement("div");
+        wrapper.className = "question";
+
+        // Create <audio> tag
+        const audio = document.createElement("audio");
+        audio.controls = true;
+        audio.src = cleanSrc;
+        audio.textContent = "Your browser does not support the audio element.";
+
+        // Create <textarea> with required attribute
+        const textarea = document.createElement("textarea");
+        textarea.id = id;
+        textarea.name = id;
+        textarea.required = true;
+
+        // Insert elements into wrapper
+        wrapper.appendChild(audio);
+        wrapper.appendChild(textarea);
+
+        // Place each generated question ABOVE the Submit button
+        formEl.insertBefore(wrapper, submitBtn);
+    });
+
+    /* ============================================================
+       5. SUBMIT HANDLER
+       - Collects answers from ALL dynamically generated textareas
+       - Sends them to /submit as a JSON object
+       ============================================================ */
+    formEl.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        submitBtn.disabled = true;
+
+        const payload = {
+            participantName: document.getElementById("participantName").value.trim(),
+            answers: {},                      // textarea answers keyed by their generated IDs
+            order: questionOrder,             // exact audio order presented
+            submittedAt: new Date().toISOString()
+        };
+
+        // Collect every textarea’s value
+        formEl.querySelectorAll(".question textarea").forEach(t => {
+            payload.answers[t.name] = t.value.trim();
         });
 
-        // if already done on this browser, hide form
-        if (localStorage.getItem("audioSurveyDone") === "1") {
-            form.classList.add("hidden");
-            thanks.classList.remove("hidden");
+        try {
+            const res = await fetch("/submit", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const json = await res.json();
+
+            if (json.ok) {
+                formEl.classList.add("hidden");
+                thanks.classList.remove("hidden");
+                localStorage.setItem("audioSurveyDone", "1");
+            } else {
+                alert("There was a problem saving your response.");
+                submitBtn.disabled = false;
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Network error trying to submit.");
+            submitBtn.disabled = false;
         }
-    </script>
-</body>
+    });
+
+
+    /* ============================================================
+       6. AUTO-HIDE FORM IF USER ALREADY COMPLETED SURVEY
+       - Uses localStorage so they don't see the form again
+       ============================================================ */
+    if (localStorage.getItem("audioSurveyDone") === "1") {
+        formEl.classList.add("hidden");
+        thanks.classList.remove("hidden");
+    }
+</script>
+
+
 
 </html>
