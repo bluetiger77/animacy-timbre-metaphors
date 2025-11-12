@@ -2,6 +2,8 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Pool } from "pg";
+import dotenv from "dotenv";
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -60,6 +62,30 @@ app.post("/submit", async (req, res) => {
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "static", "index.html"));
 });
+
+app.get("/__diag", async (_req, res) => {
+    try {
+        // Is DATABASE_URL set?
+        const hasDbUrl = !!process.env.DATABASE_URL;
+
+        // Can we run a trivial query?
+        let nowUtc = null;
+        let hasTable = null;
+
+        if (hasDbUrl) {
+            const r1 = await pool.query("SELECT NOW() AT TIME ZONE 'UTC' AS now_utc");
+            nowUtc = r1.rows[0].now_utc;
+
+            const r2 = await pool.query("SELECT to_regclass('public.responses') AS has_table");
+            hasTable = r2.rows[0].has_table; // "responses" if present, null if missing
+        }
+
+        res.json({ ok: true, hasDbUrl, nowUtc, hasTable });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
