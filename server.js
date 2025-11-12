@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // 1) Static files (your index.html, audio/, etc.)
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "static")));
 
 // 2) Parse JSON
 app.use(express.json({ limit: "2mb" }));
@@ -58,7 +58,7 @@ app.post("/submit", async (req, res) => {
 
 // 5) Fallback to index.html for root
 app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
+    res.sendFile(path.join(__dirname, "static", "index.html"));
 });
 
 const PORT = process.env.PORT || 3000;
