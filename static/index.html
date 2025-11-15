@@ -11,7 +11,8 @@
             max-width: 700px;
             margin: 0 auto;
             padding: 1.5rem;
-            line-height: 1.6;
+            line-height: 1.75;
+            font-size: 1.15rem;
         }
 
         h1 {
@@ -58,12 +59,49 @@
         .hidden {
             display: none;
         }
+
     </style>
 </head>
 
 <body>
     <h1>Audio Survey</h1>
-    <p>Each song snippet below contains synths and drums/percussion of some kind. In order to know what kind of associations and imagery are evoked by these two types of instruments, we would like you to create a 1 to 3 sentence description of characters in some kind of narrative, image, situation, or relationship where the characters represent the synths and the percussion. Don't worry about being clear about which particular synth or percussive element you are referring to in your descriptions. Also, not all synths or percussive elements need to be described. A character can represent all, some, or one of the synths, and it can represent all, some, or one of the percussive elements. Multiple characters for both the synths and drums are allowed, as long as you have at least one character for both synths and drums for each song snippet. Your characters can be any living being, real or unreal. There are no other rules whatsoever beyond this for the descriptions you write. If you need more than 3 sentences that is okay too, but aim for somewhere between 1 and 3. We want you to create whatever description is easiest or most rewarding to write using the corresponding song snippet as inspiration.</p>
+    <section>
+        <p>
+            Each song snippet below contains only synths and drums/percussion of some kind.
+            In order to know what kind of associations and imagery are evoked by these two types of instruments, we would like you to create descriptions of characters in some kind of event, image, or situation where the characters represent the synths and the percussion.
+        </p>
+
+        <p>Here are some examples of what you might write if the song snippets had flutes and violins instead of synths and drums:</p>
+
+        <ol>
+            <li>"The flutes and violins had a tense and dynamic conversation as they both reached peak volume."</li>
+            <li>"The violins raised up the flutes to new heights as the flutes bellowed out their melody in epic triumph."
+            </li>
+            <li>"The tired flute lingered on the edge of the song until it could contribute no more."</li>
+            <li>"The violins staggered into place, only to dart back out moments later."</li>
+        </ol>
+
+        <p>The rules are as follows:</p>
+
+        <ol>
+            <li>Your description should make you think of the instruments in terms of living beings.</li>
+            <li>Write at least one sentence for each description.</li>
+            <li>
+                For every song snippet, you should have descriptions for both synths and drums/percussion.
+                So, in the examples above, example 1 could be used alone since it describes both flutes and violins, whereas examples 3 and 4 would have to be used together since both of them only describe either flutes or violins.
+            </li>
+            <li>
+                Not all synths or percussive elements you hear need to be described.
+                So, for example, your "synth" character for a particular song snippet doesn’t have to represent all the synths you hear in that snippet.
+            </li>
+            <li>You can have multiple characters for each instrument if desired.</li>
+            <li>The descriptions should be whatever is easiest or most rewarding to write for you.</li>
+        </ol>
+
+        <p>
+            There will be a box to write any feedback you have at the end of the survey. This might include mentioning that certain song snippets were extra difficult to write descriptions for, describing how you interpreted the survey task, or anything else.
+        </p>
+    </section>
 
     <form id="surveyForm">
 
@@ -74,6 +112,11 @@
                 style="width:100%;padding:0.4rem;font-size:1rem" />
         </div>
 
+        <!-- Questions will insert above this -->
+        <div class="question" id="feedbackContainer">
+            <label for="feedback">Feedback for survey</label>
+            <textarea id="feedback" name="feedback" style="min-height:120px;"></textarea>
+        </div>
 
         <button type="submit" id="submitBtn">Submit</button>
     </form>
@@ -177,24 +220,38 @@
         const wrapper = document.createElement("div");
         wrapper.className = "question";
 
+        // Add a question number label
+        const numberLabel = document.createElement("div");
+        numberLabel.style.fontWeight = "600";
+        numberLabel.style.marginBottom = "0.5rem";
+        numberLabel.textContent = `Song Snippet ${idx + 1}`;
+        wrapper.appendChild(numberLabel);
+
+
         // Create <audio> tag
         const audio = document.createElement("audio");
         audio.controls = true;
         audio.src = cleanSrc;
         audio.textContent = "Your browser does not support the audio element.";
 
-        // Create <textarea> with required attribute
-        const textarea = document.createElement("textarea");
-        textarea.id = id;
-        textarea.name = id;
-        textarea.required = true;
-
-        // Insert elements into wrapper
+        // Insert the audio first
         wrapper.appendChild(audio);
-        wrapper.appendChild(textarea);
 
-        // Place each generated question ABOVE the Submit button
-        formEl.insertBefore(wrapper, submitBtn);
+        // Single textarea input
+        const label = document.createElement("label");
+        label.setAttribute("for", id);
+        label.textContent = "Your description";
+
+        const ta = document.createElement("textarea");
+        ta.id = id;
+        ta.name = id;
+        ta.required = true;
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(ta);
+
+        // Place each generated question ABOVE the feedback box
+        formEl.insertBefore(wrapper, feedbackContainer);
     });
 
     /* ============================================================
@@ -202,22 +259,39 @@
        - Collects answers from ALL dynamically generated textareas
        - Sends them to /submit as a JSON object
        ============================================================ */
-    formEl.addEventListener("submit", async (event) => {
+ formEl.addEventListener("submit", async (event) => {
         event.preventDefault();
         submitBtn.disabled = true;
 
+        // Remove previous highlighting
+        formEl.querySelectorAll(".invalid-field").forEach(el => {
+            el.classList.remove("invalid-field");
+        });
+
+        const participantName = document.getElementById("participantName").value.trim();
+        if (!participantName) {
+            alert("Please enter your name.");
+            submitBtn.disabled = false;
+            return;
+        }
+
+        // Collect answers: one textarea per audio
+        const answers = {};
+
+        formEl.querySelectorAll(".question textarea").forEach(t => {
+            answers[t.name] = t.value.trim();
+        });
+
+        // Build payload
         const payload = {
-            participantName: document.getElementById("participantName").value.trim(),
-            answers: {},                      // textarea answers keyed by their generated IDs
-            order: questionOrder,             // exact audio order presented
+            participantName,
+            answers,
+            order: questionOrder,
+            feedback: document.getElementById("feedback").value.trim(),
             submittedAt: new Date().toISOString()
         };
 
-        // Collect every textarea’s value
-        formEl.querySelectorAll(".question textarea").forEach(t => {
-            payload.answers[t.name] = t.value.trim();
-        });
-
+        // --- SEND TO SERVER ---
         try {
             const res = await fetch("/submit", {
                 method: "POST",
@@ -241,6 +315,7 @@
             submitBtn.disabled = false;
         }
     });
+
 
 
     /* ============================================================
