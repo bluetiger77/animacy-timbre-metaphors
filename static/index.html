@@ -65,7 +65,7 @@
 
 <body>
     <h1>Audio Survey</h1>
-    <section>
+    <section id="instructions">
         <p>
             Each song snippet below contains only synths and drums/percussion of some kind.
             In order to know what kind of associations and imagery are evoked by these two types of instruments, we would like you to create descriptions of characters in some kind of event, image, or situation where the characters represent the synths and the percussion.
@@ -302,6 +302,7 @@
             const json = await res.json();
 
             if (json.ok) {
+                document.getElementById("instructions").classList.add("hidden");
                 formEl.classList.add("hidden");
                 thanks.classList.remove("hidden");
                 localStorage.setItem("audioSurveyDone", "1");
