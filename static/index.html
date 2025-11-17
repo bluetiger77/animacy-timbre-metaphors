@@ -216,6 +216,8 @@
     const formEl = document.getElementById("surveyForm");
     const submitBtn = document.getElementById("submitBtn");
     const thanks = document.getElementById("thanks");
+    const instructionsEl = document.getElementById("instructions");
+
 
     // Shuffle file order
     const randomizedFiles = shuffle([...FILES]);
@@ -427,7 +429,7 @@
             const json = await res.json();
 
             if (json.ok) {
-                document.getElementById("instructions").classList.add("hidden");
+                if (instructionsEl) instructionsEl.classList.add("hidden");
                 formEl.classList.add("hidden");
                 thanks.classList.remove("hidden");
                 localStorage.setItem("audioSurveyDone", "1");
@@ -449,6 +451,7 @@
        - Uses localStorage so they don't see the form again
        ============================================================ */
     if (localStorage.getItem("audioSurveyDone") === "1") {
+        if (instructionsEl) instructionsEl.classList.add("hidden");
         formEl.classList.add("hidden");
         thanks.classList.remove("hidden");
     }
