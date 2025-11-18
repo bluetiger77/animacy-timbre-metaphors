@@ -29,7 +29,7 @@ const pool = new Pool({
 // 4) Submit endpoint
 app.post("/submit", async (req, res) => {
     try {
-        const { participantName, answers, order, submittedAt } = req.body;
+        const { participantName, answers, order, feedback, submittedAt } = req.body;
 
         // Basic validation
         if (!participantName || typeof answers !== "object" || !Array.isArray(order)) {
@@ -38,16 +38,18 @@ app.post("/submit", async (req, res) => {
 
         // Insert
         const q = `
-      INSERT INTO responses (participant_name, answers, order_list, submitted_at)
-      VALUES ($1, $2::jsonb, $3::text[], $4::timestamptz)
+      INSERT INTO responses (participant_name, answers, order_list, feedback, submitted_at)
+      VALUES ($1, $2::jsonb, $3::text[], $4::text, $5::timestamptz)
       RETURNING id
     `;
         const vals = [
             participantName.trim(),
             answers,
             order,
+            feedback || "",
             submittedAt || new Date().toISOString()
         ];
+
 
         const result = await pool.query(q, vals);
         return res.json({ ok: true, id: result.rows[0].id });
