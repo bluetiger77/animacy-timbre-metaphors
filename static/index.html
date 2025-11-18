@@ -371,9 +371,11 @@
                 answers[baseId] = {
                     synth: "",
                     percussion: "",
-                    hard: false
+                    synth_difficult: false,
+                    perc_difficult: false
                 };
             }
+
             answers[baseId][field] = t.value.trim();
         });
 
